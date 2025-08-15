@@ -35,10 +35,47 @@ def clean_youtube_title(title):
     
     return title.strip()
 
+# def get_yt_metadata(link):
+#     try:
+#         # Get the proxy URL from the environment variables
+#         proxy_url = os.environ.get('PROXY_URL')
+
+#         ydl_opts = {
+#             'format': 'bestaudio/best',
+#             'outtmpl': os.path.join(settings.MEDIA_ROOT, '%(id)s.%(ext)s'),
+#             'postprocessors': [{
+#                 'key': 'FFmpegExtractAudio',
+#                 'preferredcodec': 'mp3',
+#                 'preferredquality': '192',
+#             }],
+#             # Add the proxy configuration here
+#             'proxy': proxy_url,
+#         }
+
+#         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+#             info_dict = ydl.extract_info(link, download=True)
+#             original_title = info_dict.get('title', 'Unknown Title')
+#             cleaned_title = clean_youtube_title(original_title)
+
+#             video_id = info_dict.get('id')
+#             audio_file_path = os.path.join(settings.MEDIA_ROOT, f"{video_id}.mp3")
+
+#             if not os.path.exists(audio_file_path):
+#                  for file in os.listdir(settings.MEDIA_ROOT):
+#                      if file.startswith(video_id):
+#                          audio_file_path = os.path.join(settings.MEDIA_ROOT, file)
+#                          break
+
+#             return cleaned_title, audio_file_path
+#     except Exception as e:
+#         print(f"Error with yt-dlp: {e}")
+#         return None, None
+
 def get_yt_metadata(link):
+    """Gets both title and a temporary audio file path using a single call."""
     try:
-        # Get the proxy URL from the environment variables
-        proxy_url = os.environ.get('PROXY_URL')
+        # Define the path to your cookies file
+        cookies_file_path = os.path.join(settings.BASE_DIR, 'cookies.txt')
 
         ydl_opts = {
             'format': 'bestaudio/best',
@@ -48,8 +85,8 @@ def get_yt_metadata(link):
                 'preferredcodec': 'mp3',
                 'preferredquality': '192',
             }],
-            # Add the proxy configuration here
-            'proxy': proxy_url,
+            # Add the cookie file option here
+            'cookiefile': cookies_file_path,
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
