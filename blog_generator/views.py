@@ -35,10 +35,11 @@ def clean_youtube_title(title):
     
     return title.strip()
 
-
 def get_yt_metadata(link):
-    """Gets both title and a temporary audio file path using a single call."""
     try:
+        # Get the proxy URL from the environment variables
+        proxy_url = os.environ.get('PROXY_URL')
+
         ydl_opts = {
             'format': 'bestaudio/best',
             'outtmpl': os.path.join(settings.MEDIA_ROOT, '%(id)s.%(ext)s'),
@@ -47,15 +48,13 @@ def get_yt_metadata(link):
                 'preferredcodec': 'mp3',
                 'preferredquality': '192',
             }],
+            # Add the proxy configuration here
+            'proxy': proxy_url,
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(link, download=True)
-            
-            # Get the original title
             original_title = info_dict.get('title', 'Unknown Title')
-            
-            # Clean the title before returning it
             cleaned_title = clean_youtube_title(original_title)
 
             video_id = info_dict.get('id')
