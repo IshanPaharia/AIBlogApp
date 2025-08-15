@@ -1,0 +1,132 @@
+{% extends 'base.html' %} 
+{% block title %}Home - AI Blog App{% endblock %} 
+{% block content %}
+<div class="max-w-3xl mx-auto">
+  <div
+    class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-2xl shadow-lg flex flex-col"
+  >
+    {% csrf_token %}
+    <div class="text-center">
+      <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+        AI Blog Generator
+      </h2>
+      <p class="text-gray-600 dark:text-gray-300">
+        Turn any YouTube video into a high-quality blog article instantly. Just
+        paste the link below to get started.
+      </p>
+    </div>
+
+    <div class="mt-8">
+      <label
+        for="youtubeLink"
+        class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2"
+        >YouTube Video Link</label
+      >
+      <div
+        class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2"
+      >
+        <input
+          id="youtubeLink"
+          type="url"
+          placeholder="https://www.youtube.com/watch?v=..."
+          class="flex-grow p-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+        />
+        <button
+          id="generateBlogButton"
+          class="bg-indigo-500 text-white px-6 py-3 font-semibold rounded-md hover:bg-indigo-600 active:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-900 transition-all duration-200 flex items-center justify-center"
+        >
+          <svg
+            id="button-icon"
+            class="w-5 h-5 mr-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M13 10V3L4 14h7v7l9-11h-7z"
+            ></path>
+          </svg>
+          <span id="button-text">Generate</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading spinner and status message area -->
+    <div id="status-container" class="mt-6 text-center">
+      <!-- This div will be populated by JavaScript -->
+    </div>
+  </div>
+</div>
+{% endblock %} {% block extra_js %}
+<script>
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== "") {
+      const cookies = document.cookie.split(";");
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.startsWith(name + "=")) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  document
+    .getElementById("generateBlogButton")
+    .addEventListener("click", async () => {
+      const youtubeLink = document.getElementById("youtubeLink").value;
+      const statusContainer = document.getElementById("status-container");
+      const generateButton = document.getElementById("generateBlogButton");
+      const buttonText = document.getElementById("button-text");
+      const buttonIcon = document.getElementById("button-icon");
+      const csrftoken = getCookie("csrftoken");
+
+      if (youtubeLink) {
+        // Update button state to show loading
+        generateButton.disabled = true;
+        buttonText.textContent = "Generating...";
+        buttonIcon.innerHTML = `<svg class="animate-spin w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+        statusContainer.innerHTML = `<p class="text-gray-500 dark:text-gray-400">Please wait, this can take some time depending on the video length...</p>`;
+
+        try {
+          const response = await fetch("/generate-blog", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": csrftoken,
+            },
+            body: JSON.stringify({ link: youtubeLink }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok && data.blog_post_id) {
+            statusContainer.innerHTML = `<p class="text-green-500 font-semibold">Success! Redirecting to your new blog post...</p>`;
+            window.location.href = `/blog-details/${data.blog_post_id}/`;
+          } else {
+            statusContainer.innerHTML = `<p class="text-red-500 font-semibold">Error: ${
+              data.error || "An unknown error occurred."
+            }</p>`;
+          }
+        } catch (error) {
+          console.error("Fetch Error:", error);
+          statusContainer.innerHTML = `<p class="text-red-500 font-semibold">A network error occurred. Please check your connection and try again.</p>`;
+        } finally {
+          // Reset button state (useful if there's an error)
+          generateButton.disabled = false;
+          buttonText.textContent = "Generate";
+          buttonIcon.innerHTML = `<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>`;
+        }
+      } else {
+        alert("Please enter a valid YouTube link.");
+      }
+    });
+</script>
+{% endblock %}
