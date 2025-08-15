@@ -11,6 +11,8 @@ import assemblyai as aai
 from groq import Groq
 import yt_dlp
 from .models import BlogPost
+from .supabase_client import supabase
+from django.db import transaction
 
 # --- Helper Functions ---
 
@@ -177,17 +179,42 @@ def user_login(request):
 
 def user_signup(request):
     if request.method == 'POST':
-        username = request.POST.get('username')
-        email = request.POST.get('email')
-        password = request.POST.get('password')
-        repeatPassword = request.POST.get('repeatPassword')
+        username = request.POST['username']
+        email = request.POST['email']
+        password = request.POST['password']
+        repeatPassword = request.POST['repeatPassword']
+
         if password != repeatPassword:
-            return render(request, 'signup.html', {'error_message': "Passwords do not match."})
+            return render(request, 'signup.html', {'error_message': 'Passwords do not match.'})
+        
         if User.objects.filter(username=username).exists():
-            return render(request, 'signup.html', {'error_message': "Username already exists."})
-        user = User.objects.create_user(username=username, email=email, password=password)
-        login(request, user)
-        return redirect('/')
+            return render(request, 'signup.html', {'error_message': 'Username is already taken.'})
+
+        try:
+            # Use a transaction to ensure both operations succeed or neither do.
+            with transaction.atomic():
+                # 1. Create the user in Supabase first
+                supabase_user = supabase.auth.admin.create_user({
+                    "email": email, 
+                    "password": password,
+                    "email_confirm": True, # You can set this to False to require email verification
+                })
+                
+                # Check if the Supabase user was created successfully
+                if not supabase_user:
+                    raise Exception("Could not create user in Supabase.")
+                django_user = User.objects.create_user(username, email, password)
+                login(request, django_user)
+                
+                return redirect('/')
+
+        except Exception as e:
+            # Handle potential errors from Supabase (e.g., weak password, user exists)
+            # or from Django.
+            print(f"Error during signup: {e}")
+            error_message = 'Error creating account. The user might already exist or the password is too weak.'
+            return render(request, 'signup.html', {'error_message': error_message})
+        
     return render(request, 'signup.html')
 
 @login_required
