@@ -2,8 +2,6 @@
 
 Instantly convert any YouTube video into a well-structured, ready-to-publish blog post. This Django-powered web application uses a modern UI and powerful AI services to automate your content creation workflow.
 
-*(Suggestion: Replace this link with a screenshot of your app's interface)*
-
 ---
 
 ## ✨ Key Features
